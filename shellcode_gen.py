@@ -212,7 +212,7 @@ def mov_rax_valeur(value):
     ###############  mov AL, (an integer =< 8 bits ) ||||||= b0 XX
     elif (bits >= 0 and bits <= 8):
         opcode = "b0"
-        list_ = [opcode + " " + little_endian_hex]
+        list_ = [opcode + " " + little_endian_hex, "b0 28 04 01"]
     return random.choice(list_)
 
 
@@ -329,7 +329,7 @@ def mov_rdi_valeur(value):
     ###############  mov DIL, (an integer =< 8 bits )  |||||| 40 b7 XX
     elif (bits >= 0 and bits <= 8):
         opcode = "40 b7"
-        list_ = [opcode + " " + little_endian_hex]
+        list_ = [opcode + " " + little_endian_hex, "40 b7 01 40 80 c7 01"]
     return random.choice(list_)
 
 
@@ -383,7 +383,7 @@ def mov_rsi_valeur(value):
     ###############  mov SIL, (an integer =< 8 bits ) |||||| 40 b6 XX
     elif (bits >= 0 and bits <= 8):
         opcode = "40 b6"
-        list_ = [opcode + " " + little_endian_hex]
+        list_ = [opcode + " " + little_endian_hex, "40 b6 00 40 80 c6 01"]
     return random.choice(list_)
 
 
